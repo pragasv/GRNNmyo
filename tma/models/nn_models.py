@@ -35,7 +35,8 @@ The code is based on the following paper :
 from keras.models import Sequential, load_model
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.core import Dense, Activation, Flatten
-from keras.optimizers import sgd, Adam
+from keras.optimizers import SGD as sgd
+from keras.optimizers import Adam
 from keras.engine import InputLayer
 
 

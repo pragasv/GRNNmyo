@@ -26,6 +26,9 @@
 ## standard
 import os
 from pickle import load
+
+import matplotlib.pyplot as plt
+
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import numpy as np
 import h5py
@@ -61,9 +64,10 @@ if gcrnnmlpMethod:
     model_path = 'data/subject_1001_Ashwin/grnn_models/gcrnn_gcn_weights.txt'
 
 ## training parameters
-epochs = 50
+epochs = 100
 saveModel = True
 trainModel = True
+Learning_rate_decay =True
 
 #////// body ///////
 
@@ -122,9 +126,12 @@ if gcrnnmlpMethod:
 
     # define the optimizer
     optimizer = torch.optim.Adam(model.parameters(), 
-                                lr=0.001, 
+                                lr=0.01,
                                 betas=(0.9, 0.999),
                                 weight_decay=0)
+    #decay of learningrate
+    decayRate = 0.99
+    my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=decayRate)
 
     ## train model                            
     if trainModel:
@@ -137,6 +144,7 @@ if gcrnnmlpMethod:
         # random.shuffle(trainData)    
 
         # commence training
+        LOSS_LIST = []
         print('training...')
         model.train()
         for epoch in range(epochs):
@@ -147,12 +155,16 @@ if gcrnnmlpMethod:
                 loss.backward()
                 optimizer.step()
 
+                LOSS_LIST.append(loss.item())
                 if (i + 1) % 10 == 0:
                     print(
                         f"Epoch [{epoch + 1}/{epochs}], "
                         f"Step [{i + 1}/{len(trainData)}], "
-                        f"Loss: {loss.item():.4f}"
+                        f"Loss: {loss.item():.4f}, "
+                        f"learning rate : {my_lr_scheduler.get_last_lr()[0]:.6f}"
                     )
+            if Learning_rate_decay:
+                my_lr_scheduler.step()
 
         print('Finished Traning!')
 
@@ -160,6 +172,10 @@ if gcrnnmlpMethod:
             # save the trained model
             print('saving model...')
             torch.save(model.state_dict(), model_path)
+
+        ##plot the loss function
+        plt.plot(np.array(LOSS_LIST))
+        plt.show()
 
     else:
         # load the specifiec model
@@ -179,8 +195,8 @@ if gcrnnmlpMethod:
     with torch.no_grad():
         for data in test_loader:
             _, pred = model(data).max(dim=1)
-            y_pred.append(pred)
-            y_true.append(data.y)
+            y_pred.append(pred.numpy())
+            y_true.append(data.y.numpy())
     print(classification_report(y_true, y_pred, target_names=['M', 'R', 'HC', 'V', 'PO']))
 
 
